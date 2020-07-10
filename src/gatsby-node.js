@@ -1,3 +1,5 @@
+const crumbLabelUpdates = {} // mapping pathname without trailing slash to crumbLabel
+
 exports.onCreatePage = ({ page, pathPrefix, actions }, pluginOptions) => {
   if (pluginOptions.useAutoGen) {
     const { createPage, deletePage } = actions
@@ -8,10 +10,28 @@ exports.onCreatePage = ({ page, pathPrefix, actions }, pluginOptions) => {
     }
 
     const optionsActual = { ...defaultOptions, ...pluginOptions }
-    const { crumbLabelUpdates = [], trailingSlashes } = optionsActual
+    const {
+      crumbLabelUpdates: configCrumbLabelUpdates,
+      trailingSlashes,
+    } = optionsActual
+
+    // import the crumbLabelUpdates from the config on the first execution
+    if (crumbLabelUpdates === {}) {
+      configCrumbLabelUpdates.forEach(({ pathname, crumbLabel }) => {
+        // regex removes any trailing slashes from any pathname besides /
+        crumbLabelUpdates[pathname.replace(/.\/$/, '')] = crumbLabel
+      })
+    }
 
     // for pages not excludecd, create crumbs out of each section of the page path
     if (!optionsActual.exclude.includes(page.path)) {
+      // if crumbLabel is in the page context, add it to crumbLabelUpdates
+      const { context: oldPageContext } = page
+      if (typeof oldPageContext.crumbLabel !== 'undefined') {
+        const pathname = page.path.replace(/\/$/, '') // see above
+        crumbLabelUpdates[pathname] = oldPageContext.crumbLabel
+      }
+
       let acc = ''
       let crumbs = []
       let pathname = ''
@@ -35,11 +55,9 @@ exports.onCreatePage = ({ page, pathPrefix, actions }, pluginOptions) => {
 
           // update crumbLabel for any crumbLabelUpdates otherwise use path
           let crumbLabel = split
-          crumbLabelUpdates.forEach((labelUpdate) => {
-            if (labelUpdate.pathname === acc) {
-              crumbLabel = labelUpdate.crumbLabel
-            }
-          })
+          if (typeof crumbLabelUpdates[acc] !== 'undefined') {
+            crumbLabel = crumbLabelUpdates[acc]
+          }
 
           // if trailingSlashes add a trailing slash to the end of
           // each crumb. Excluding root (/) and crumbs including a "." (ex: 404.html)
@@ -68,7 +86,6 @@ exports.onCreatePage = ({ page, pathPrefix, actions }, pluginOptions) => {
       }
 
       // inject breadcrumbs into page context
-      const { context: oldPageContext } = page
       deletePage(page)
       createPage({
         ...page,
