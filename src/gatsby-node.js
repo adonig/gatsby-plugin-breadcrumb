@@ -19,7 +19,7 @@ exports.onCreatePage = ({ page, pathPrefix, actions }, pluginOptions) => {
     if (crumbLabelUpdates === {}) {
       configCrumbLabelUpdates.forEach(({ pathname, crumbLabel }) => {
         // regex removes any trailing slashes from any pathname besides /
-        crumbLabelUpdates[pathname.replace(/.\/$/, '')] = crumbLabel
+        crumbLabelUpdates[pathname.replace(/\/$/, '')] = crumbLabel
       })
     }
 
