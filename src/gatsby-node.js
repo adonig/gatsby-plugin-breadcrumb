@@ -1,4 +1,4 @@
-const crumbLabelUpdates = {} // mapping pathname without trailing slash to crumbLabel
+const crumbLabelUpdates = new Map() // mapping pathname without trailing slash to crumbLabel
 
 exports.onCreatePage = ({ page, pathPrefix, actions }, pluginOptions) => {
   if (pluginOptions.useAutoGen) {
@@ -16,10 +16,10 @@ exports.onCreatePage = ({ page, pathPrefix, actions }, pluginOptions) => {
     } = optionsActual
 
     // import the crumbLabelUpdates from the config on the first execution
-    if (crumbLabelUpdates === {}) {
+    if (crumbLabelUpdates.size === 0) {
       configCrumbLabelUpdates.forEach(({ pathname, crumbLabel }) => {
         // regex removes any trailing slashes from any pathname besides /
-        crumbLabelUpdates[pathname.replace(/\/$/, '')] = crumbLabel
+        crumbLabelUpdates.set(pathname.replace(/\/$/, ''), crumbLabel)
       })
     }
 
@@ -29,7 +29,9 @@ exports.onCreatePage = ({ page, pathPrefix, actions }, pluginOptions) => {
       const { context: oldPageContext } = page
       if (typeof oldPageContext.crumbLabel !== 'undefined') {
         const pathname = page.path.replace(/\/$/, '') // see above
-        crumbLabelUpdates[pathname] = oldPageContext.crumbLabel
+        if (!crumbLabelUpdates.has(pathname)) {
+          crumbLabelUpdates.set(pathname, oldPageContext.crumbLabel)
+        }
       }
 
       let acc = ''
@@ -55,8 +57,8 @@ exports.onCreatePage = ({ page, pathPrefix, actions }, pluginOptions) => {
 
           // update crumbLabel for any crumbLabelUpdates otherwise use path
           let crumbLabel = split
-          if (typeof crumbLabelUpdates[acc] !== 'undefined') {
-            crumbLabel = crumbLabelUpdates[acc]
+          if (crumbLabelUpdates.has(acc)) {
+            crumbLabel = crumbLabelUpdates.get(acc)
           }
 
           // if trailingSlashes add a trailing slash to the end of
